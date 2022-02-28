@@ -1,6 +1,7 @@
 # Docker
 
 
+
 # Build a Docker image
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 
@@ -22,32 +23,37 @@ stages:
     pool:
       vmImage: ubuntu-latest
     steps:
+
     - task: Maven@3
       inputs:
         mavenPomFile: 'pom.xml'
         publishJUnitResults: true
         testResultsFiles: '**/surefire-reports/TEST-*.xml'
         javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.8'
         mavenVersionOption: 'Default'
         mavenAuthenticateFeed: false
         effectivePomSkip: false
-        sqMavenPluginVersionChoice: 'latest'
+        sonarQubeRunAnalysis: false
     - task: Docker@2
       displayName: Build an image
       inputs:
-        command: build
-        dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
-        tags: |
-          $(tag)
+          command: build
+          dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+          tags: |
+            $(tag)
+   
     - task: Docker@2
       inputs:
         containerRegistry: 'DockerHub'
-        repository: 'aman690 / python'
+        repository: 'carbonaraaah / pipeline'
         command: 'buildAndPush'
         Dockerfile: '**/Dockerfile'
+  
+    
     - task: NuGetCommand@2
       inputs:
         command: 'restore'
         restoreSolution: '**/*.sln'
         feedsToUse: 'select'
-        vstsFeed: 'aa2c3146-9248-45db-8b9d-3534f920b5bd/3534b62a-9ff2-4f52-ad06-512b9dcb6fa7'
+        vstsFeed: 'cf759579-4619-4704-84fb-8af453e09915'
