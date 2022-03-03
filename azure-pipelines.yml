@@ -22,6 +22,7 @@ stages:
     displayName: Build
     pool:
       vmImage: ubuntu-latest
+      environment: 'default'
     steps:
 
     - task: Maven@3
@@ -57,3 +58,42 @@ stages:
         restoreSolution: '**/*.sln'
         feedsToUse: 'select'
         vstsFeed: 'cf759579-4619-4704-84fb-8af453e09915'
+
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy job
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'default'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: 'manifests'
+              downloadPath: '$(System.ArtifactsDirectory)/manifests'
+
+          - task: KubernetesManifest@0
+            displayName: Create imagePullSecret
+            inputs:
+              action: createSecret
+              secretName: $(imagePullSecret)
+              namespace: $(k8sNamespace)
+              dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
+              
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes cluster
+            inputs:
+              action: deploy
+              namespace: $(k8sNamespace)
+              manifests: |
+                $(System.ArtifactsDirectory)/manifests/deployment.yml
+                $(System.ArtifactsDirectory)/manifests/service.yml
+              imagePullSecrets: |
+                $(imagePullSecret)
+              containers: |
+                $(containerRegistry)/$(imageRepository):$(tag)
